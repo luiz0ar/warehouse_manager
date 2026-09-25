@@ -1,0 +1,25 @@
+services:
+  postgreSQL:
+    image: postgres:18-alpine
+    container_name: warehouse_manager
+    environment:
+      POSTGRES_USER: "warehouse"
+      POSTGRES_PASSWORD: "root"
+      POSTGRES_DB: "warehouse_manager"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgreSQL:/var/lib/postgresql
+
+  redis:
+    image: redis:8-alpine
+    container_name: warehouse_manager_redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis:/data
+
+volumes:
+  postgreSQL:
+  redis:
