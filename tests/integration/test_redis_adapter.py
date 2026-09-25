@@ -93,5 +93,5 @@ async def test_redis_pub_sub_event() -> None:
 
     finally:
         await pubsub.unsubscribe(channel)
-        await pubsub.aclose()
+        await pubsub.aclose()  # type: ignore[no-untyped-call]
         await redis_client.aclose()
