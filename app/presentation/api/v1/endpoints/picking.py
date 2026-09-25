@@ -1,3 +1,4 @@
+import time
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -6,6 +7,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.use_cases.recommend_picking import RecommendPickingUseCase
+from app.core.metrics import WAREHOUSE_PICKING_DURATION_SECONDS
 from app.infrastructure.cache.redis_client import get_redis_client
 from app.infrastructure.cache.redis_grid_adapter import RedisGridAdapter
 from app.infrastructure.database.repositories import SqlAlchemyWarehouseRepository
@@ -36,12 +38,24 @@ async def recommend_picking(
     grid_cache = RedisGridAdapter(redis_client)
     use_case = RecommendPickingUseCase(repository=repository, grid_cache=grid_cache)
 
-    warehouse, recommendations = await use_case.execute(
-        warehouse_id=payload.warehouse_id,
-        coffee_type=payload.coffee_type,
-        cooperative_id=payload.cooperative_id,
-        max_recommendations=payload.max_recommendations,
-    )
+    start_time = time.perf_counter()
+    try:
+        warehouse, recommendations = await use_case.execute(
+            warehouse_id=payload.warehouse_id,
+            coffee_type=payload.coffee_type,
+            cooperative_id=payload.cooperative_id,
+            max_recommendations=payload.max_recommendations,
+        )
+        duration = time.perf_counter() - start_time
+        WAREHOUSE_PICKING_DURATION_SECONDS.labels(
+            warehouse_id=payload.warehouse_id, status="success"
+        ).observe(duration)
+    except Exception:
+        duration = time.perf_counter() - start_time
+        WAREHOUSE_PICKING_DURATION_SECONDS.labels(
+            warehouse_id=payload.warehouse_id, status="error"
+        ).observe(duration)
+        raise
 
     items = [
         PickingRecommendationItemDTO(

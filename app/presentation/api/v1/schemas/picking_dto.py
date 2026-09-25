@@ -1,5 +1,7 @@
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
+
 
 class CoordinatesDTO(BaseModel):
     """3D coordinates schema [street_x, column_y, level_z]."""

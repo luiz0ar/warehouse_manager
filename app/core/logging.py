@@ -3,6 +3,7 @@ import sys
 
 import structlog
 
+
 def setup_logging() -> None:
     """Configure structured JSON logging for production and local environments."""
     logging.basicConfig(

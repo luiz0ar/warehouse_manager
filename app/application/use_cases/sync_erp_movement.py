@@ -1,8 +1,11 @@
+from datetime import UTC, datetime
+
 import structlog
 
 from app.application.ports.grid_cache_port import GridCachePort
 from app.application.ports.warehouse_repository_port import WarehouseRepositoryPort
 from app.core.exceptions import WarehouseNotFoundError
+from app.core.metrics import WAREHOUSE_SYNC_LAG_SECONDS, WAREHOUSE_SYNC_MOVEMENTS_TOTAL
 from app.domain.models.coffee_bag import CoffeeBag
 from app.domain.models.coordinates import Coordinates
 from app.domain.models.slot import Slot, SlotStatus
@@ -32,6 +35,11 @@ class SyncERPMovementUseCase:
         Returns True if newly processed, False if skipped due to idempotency.
         """
         if await self.repository.is_idempotency_key_registered(movement.event_id):
+            WAREHOUSE_SYNC_MOVEMENTS_TOTAL.labels(
+                warehouse_id=movement.warehouse_id,
+                movement_type=movement.movement_type.value,
+                status="duplicate",
+            ).inc()
             logger.info(
                 "erp_movement_skipped_duplicate",
                 event_id=movement.event_id,
@@ -154,12 +162,21 @@ class SyncERPMovementUseCase:
         await self.grid_cache.publish_event(channel, event_payload)
         await self.grid_cache.publish_event("inventory_events", event_payload)
 
+        lag_seconds = max(0.0, (datetime.now(UTC) - movement.timestamp).total_seconds())
+        WAREHOUSE_SYNC_LAG_SECONDS.labels(warehouse_id=warehouse.warehouse_id).set(lag_seconds)
+        WAREHOUSE_SYNC_MOVEMENTS_TOTAL.labels(
+            warehouse_id=warehouse.warehouse_id,
+            movement_type=movement.movement_type.value,
+            status="processed",
+        ).inc()
+
         logger.info(
             "erp_movement_processed_successfully",
             event_id=movement.event_id,
             batch_id=movement.batch_id,
             warehouse_id=warehouse.warehouse_id,
             movement_type=movement.movement_type.value,
+            lag_seconds=round(lag_seconds, 3),
         )
 
         return True

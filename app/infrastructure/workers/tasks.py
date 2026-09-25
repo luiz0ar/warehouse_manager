@@ -7,6 +7,7 @@ from celery import Task
 
 from app.application.use_cases.sync_erp_movement import SyncERPMovementUseCase
 from app.core.config import settings
+from app.core.metrics import WAREHOUSE_SYNC_DEAD_LETTERS_TOTAL
 from app.infrastructure.cache.redis_grid_adapter import RedisGridAdapter
 from app.infrastructure.database.repositories import SqlAlchemyWarehouseRepository
 from app.infrastructure.database.session import async_session_factory
@@ -75,4 +76,7 @@ def poll_erp_movements_task() -> int:
 @celery_app.task(queue="dead_letter")
 def handle_dead_letter(payload: dict[str, Any], error: str) -> None:
     """Dead letter queue handler logging and archiving failed sync tasks."""
+    warehouse_id = str(payload.get("warehouse_id", "unknown"))
+    reason = error[:50]
+    WAREHOUSE_SYNC_DEAD_LETTERS_TOTAL.labels(warehouse_id=warehouse_id, reason=reason).inc()
     logger.error("dead_letter_queue_event_received", payload=payload, error=error)

@@ -36,6 +36,8 @@ async def test_metrics_endpoint() -> None:
         assert (
             "http_requests_total" in response.text or "python_gc_objects_collected" in response.text
         )
+        assert "warehouse_picking_duration_seconds" in response.text
+        assert "warehouse_sync_lag_seconds" in response.text
 
 
 @pytest.mark.asyncio
@@ -46,12 +48,14 @@ async def test_correlation_id_header_propagation() -> None:
         # Without incoming header -> auto-generated
         res1 = await client.get("/health")
         assert "X-Request-ID" in res1.headers
+        assert "X-Process-Time-Ms" in res1.headers
         assert len(res1.headers["X-Request-ID"]) > 10
 
         # With incoming custom header -> propagated
         custom_id = "custom-trace-id-12345"
         res2 = await client.get("/health", headers={"X-Request-ID": custom_id})
         assert res2.headers["X-Request-ID"] == custom_id
+        assert "X-Process-Time-Ms" in res2.headers
 
 
 @pytest.mark.asyncio

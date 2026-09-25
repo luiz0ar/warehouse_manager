@@ -1,10 +1,13 @@
 from typing import Any
+
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from app.core.exceptions import DomainError, WarehouseNotFoundError
 from app.core.logging import logger
+
 
 def register_exception_handlers(app: FastAPI) -> None:
     """Register global exception handlers implementing RFC 7807 Problem Details."""

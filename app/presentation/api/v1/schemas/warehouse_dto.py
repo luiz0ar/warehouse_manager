@@ -1,6 +1,9 @@
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
+
 from app.presentation.api.v1.schemas.picking_dto import CoordinatesDTO
+
 
 class BatchSnapshotDTO(BaseModel):
     """Snapshot of a coffee batch within a slot."""

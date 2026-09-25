@@ -1,7 +1,9 @@
 from datetime import UTC, datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from app.domain.models.coffee_bag import CoffeeBag
 from app.domain.models.coordinates import Coordinates
 from app.domain.models.slot import Slot, SlotStatus
@@ -13,6 +15,7 @@ from app.infrastructure.database.models import (
     SlotModel,
     WarehouseModel,
 )
+
 
 class SqlAlchemyWarehouseRepository:
     """SQLAlchemy 2.0 asynchronous implementation of WarehouseRepositoryPort."""

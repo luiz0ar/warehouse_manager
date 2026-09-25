@@ -1,6 +1,7 @@
 class DomainError(Exception):
     """Base domain exception."""
 
+
 class WarehouseNotFoundError(DomainError):
     """Raised when a warehouse is not found in database or cache."""
 
