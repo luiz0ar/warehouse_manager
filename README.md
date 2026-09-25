@@ -1,4 +1,4 @@
-# Warehouse Manager — Backend (MVP)
+# Warehouse Manager - Backend (MVP)
 
 Spacial Optimization Engine for Coffee warehouses operating in **Shadow State**.
 
