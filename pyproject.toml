@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "warehouse-manager-backend"
 version = "0.1.0"
-description = "Motor de Otimização Espacial e Sincronização Shadow State para Armazéns de Café"
+description = "Spatial Optimization Engine and Shadow State Synchronization for Coffee Warehouses"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
