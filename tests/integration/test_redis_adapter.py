@@ -43,10 +43,8 @@ async def test_redis_grid_adapter_lifecycle() -> None:
     warehouse.set_slot(slot)
 
     try:
-        # 1. Set warehouse in Redis
         await adapter.set_warehouse_grid(warehouse)
 
-        # 2. Get warehouse from Redis
         loaded = await adapter.get_warehouse_grid(warehouse_id)
         assert loaded is not None
         assert loaded.warehouse_id == warehouse_id
@@ -60,14 +58,12 @@ async def test_redis_grid_adapter_lifecycle() -> None:
         assert loaded_slot.bag.batch_id == "BATCH-REDIS-1"
         assert loaded_slot.bag.coffee_type == "CATUAI"
 
-        # 3. Get raw NumPy tensor
         tensor = await adapter.get_occupied_tensor(warehouse_id)
         assert tensor is not None
         assert tensor.shape == (2, 3, 2)
         assert tensor[0, 1, 0]
         assert not tensor[0, 0, 0]
 
-        # 4. Invalidate cache
         await adapter.invalidate_warehouse_grid(warehouse_id)
         assert await adapter.get_warehouse_grid(warehouse_id) is None
         assert await adapter.get_occupied_tensor(warehouse_id) is None
@@ -86,13 +82,7 @@ async def test_redis_pub_sub_event() -> None:
     await pubsub.subscribe(channel)
 
     try:
-        # Publish event
-        await adapter.publish_event(
-            channel, {"event": "INVENTORY_SYNC", "batch_id": "BATCH-99"}
-        )
-
-        # Read back message
-        # First message is subscription confirmation
+        await adapter.publish_event(channel, {"event": "INVENTORY_SYNC", "batch_id": "BATCH-99"})
         sub_msg = await pubsub.get_message(ignore_subscribe_messages=False, timeout=2.0)
         assert sub_msg is not None
         assert sub_msg["type"] == "subscribe"
@@ -103,5 +93,5 @@ async def test_redis_pub_sub_event() -> None:
 
     finally:
         await pubsub.unsubscribe(channel)
-        await pubsub.aclose()  # type: ignore[no-untyped-call]
+        await pubsub.aclose()
         await redis_client.aclose()

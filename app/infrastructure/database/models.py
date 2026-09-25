@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 from typing import Optional
-
 from sqlalchemy import (
     DateTime,
     Float,
@@ -55,9 +54,7 @@ class SlotModel(Base):
     z: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="FREE", nullable=False)
 
-    warehouse: Mapped["WarehouseModel"] = relationship(
-        "WarehouseModel", back_populates="slots"
-    )
+    warehouse: Mapped["WarehouseModel"] = relationship("WarehouseModel", back_populates="slots")
     coffee_batch: Mapped[Optional["CoffeeBatchModel"]] = relationship(
         "CoffeeBatchModel",
         back_populates="slot",
@@ -88,9 +85,7 @@ class CoffeeBatchModel(Base):
     entry_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     weight_kg: Mapped[float] = mapped_column(Float, default=60.0, nullable=False)
 
-    slot: Mapped[Optional["SlotModel"]] = relationship(
-        "SlotModel", back_populates="coffee_batch"
-    )
+    slot: Mapped[Optional["SlotModel"]] = relationship("SlotModel", back_populates="coffee_batch")
 
 
 class InventoryMovementModel(Base):

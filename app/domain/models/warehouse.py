@@ -12,7 +12,7 @@ class Warehouse:
     name: str
     total_streets: int  # N_STREETS (X axis)
     total_columns: int  # N_COLUMNS (Y axis)
-    total_levels: int   # N_LEVELS (Z axis)
+    total_levels: int  # N_LEVELS (Z axis)
     dock_coordinates: Coordinates = field(default_factory=lambda: Coordinates(0, 0, 0))
     slots: dict[Coordinates, Slot] = field(default_factory=dict)
 

@@ -15,9 +15,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Warehouse Manager Backend"
     API_V1_STR: str = "/api/v1"
 
-    DATABASE_URL: str = (
-        "postgresql+asyncpg://warehouse:root@localhost:5432/warehouse_manager"
-    )
+    DATABASE_URL: str = "postgresql+asyncpg://warehouse:root@localhost:5432/warehouse_manager"
 
     REDIS_URL: str = "redis://localhost:6379/0"
 

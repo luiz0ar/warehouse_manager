@@ -35,8 +35,6 @@ class WarehouseRepositoryPort(Protocol):
         """Check whether an idempotency key has already been processed."""
         ...
 
-    async def register_idempotency_key(
-        self, key: str, source: str = "LEGACY_ERP"
-    ) -> None:
+    async def register_idempotency_key(self, key: str, source: str = "LEGACY_ERP") -> None:
         """Register a processed idempotency key."""
         ...

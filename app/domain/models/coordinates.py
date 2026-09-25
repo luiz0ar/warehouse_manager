@@ -28,9 +28,5 @@ class Coordinates:
     def euclidean_distance_to(self, other: "Coordinates") -> float:
         """Calculate 3D Euclidean distance."""
         return float(
-            math.sqrt(
-                (self.x - other.x) ** 2
-                + (self.y - other.y) ** 2
-                + (self.z - other.z) ** 2
-            )
+            math.sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2 + (self.z - other.z) ** 2)
         )

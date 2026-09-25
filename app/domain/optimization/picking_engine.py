@@ -80,9 +80,7 @@ class PickingEngine:
 
                 # Check if slot matches picking criteria
                 match_type = slot.bag.coffee_type == coffee_type
-                match_coop = (
-                    cooperative_id is None or slot.bag.cooperative_id == cooperative_id
-                )
+                match_coop = cooperative_id is None or slot.bag.cooperative_id == cooperative_id
 
                 if match_type and match_coop:
                     candidates_raw.append((coords, slot.bag))

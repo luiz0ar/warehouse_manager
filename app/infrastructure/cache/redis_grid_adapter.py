@@ -84,9 +84,7 @@ class RedisGridAdapter:
             total_streets=meta["total_streets"],
             total_columns=meta["total_columns"],
             total_levels=meta["total_levels"],
-            dock_coordinates=Coordinates(
-                x=meta["dock_x"], y=meta["dock_y"], z=meta["dock_z"]
-            ),
+            dock_coordinates=Coordinates(x=meta["dock_x"], y=meta["dock_y"], z=meta["dock_z"]),
         )
 
         for coord_str, slot_data in slots_dict.items():

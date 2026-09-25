@@ -1,9 +1,7 @@
 from datetime import UTC, datetime
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
 from app.domain.models.coffee_bag import CoffeeBag
 from app.domain.models.coordinates import Coordinates
 from app.domain.models.slot import Slot, SlotStatus
@@ -16,7 +14,6 @@ from app.infrastructure.database.models import (
     WarehouseModel,
 )
 
-
 class SqlAlchemyWarehouseRepository:
     """SQLAlchemy 2.0 asynchronous implementation of WarehouseRepositoryPort."""
 
@@ -28,9 +25,7 @@ class SqlAlchemyWarehouseRepository:
         query = (
             select(WarehouseModel)
             .where(WarehouseModel.id == warehouse_id)
-            .options(
-                selectinload(WarehouseModel.slots).selectinload(SlotModel.coffee_batch)
-            )
+            .options(selectinload(WarehouseModel.slots).selectinload(SlotModel.coffee_batch))
         )
         result = await self.session.execute(query)
         wh_model = result.scalar_one_or_none()
@@ -38,16 +33,13 @@ class SqlAlchemyWarehouseRepository:
         if wh_model is None:
             return None
 
-        # Build pure domain entity
         warehouse = Warehouse(
             warehouse_id=wh_model.id,
             name=wh_model.name,
             total_streets=wh_model.total_streets,
             total_columns=wh_model.total_columns,
             total_levels=wh_model.total_levels,
-            dock_coordinates=Coordinates(
-                x=wh_model.dock_x, y=wh_model.dock_y, z=wh_model.dock_z
-            ),
+            dock_coordinates=Coordinates(x=wh_model.dock_x, y=wh_model.dock_y, z=wh_model.dock_z),
         )
 
         for s_model in wh_model.slots:
@@ -98,14 +90,11 @@ class SqlAlchemyWarehouseRepository:
 
     async def update_slot(self, warehouse_id: str, slot: Slot) -> None:
         """Update or insert an individual slot and its coffee bag."""
-        query = (
-            select(SlotModel)
-            .where(
-                SlotModel.warehouse_id == warehouse_id,
-                SlotModel.x == slot.coordinates.x,
-                SlotModel.y == slot.coordinates.y,
-                SlotModel.z == slot.coordinates.z,
-            )
+        query = select(SlotModel).where(
+            SlotModel.warehouse_id == warehouse_id,
+            SlotModel.x == slot.coordinates.x,
+            SlotModel.y == slot.coordinates.y,
+            SlotModel.z == slot.coordinates.z,
         )
         result = await self.session.execute(query)
         s_model = result.scalar_one_or_none()
@@ -123,15 +112,12 @@ class SqlAlchemyWarehouseRepository:
             await self.session.flush()
         else:
             s_model.status = slot.status.value
-            batch_query = select(CoffeeBatchModel).where(
-                CoffeeBatchModel.slot_id == s_model.id
-            )
+            batch_query = select(CoffeeBatchModel).where(CoffeeBatchModel.slot_id == s_model.id)
             batch_res = await self.session.execute(batch_query)
             batch_model = batch_res.scalar_one_or_none()
 
         if slot.bag is not None:
             if batch_model is None:
-                # Check if batch with this ID already exists
                 existing_batch_query = select(CoffeeBatchModel).where(
                     CoffeeBatchModel.batch_id == slot.bag.batch_id
                 )
@@ -195,9 +181,7 @@ class SqlAlchemyWarehouseRepository:
         result = await self.session.execute(query)
         return result.scalar_one_or_none() is not None
 
-    async def register_idempotency_key(
-        self, key: str, source: str = "LEGACY_ERP"
-    ) -> None:
+    async def register_idempotency_key(self, key: str, source: str = "LEGACY_ERP") -> None:
         """Register a new idempotency key."""
         entry = IdempotencyKeyModel(key=key, source=source, created_at=datetime.now(UTC))
         self.session.add(entry)

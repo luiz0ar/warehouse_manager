@@ -43,18 +43,14 @@ def create_slot(
 
 def test_picking_empty_warehouse(empty_warehouse: Warehouse) -> None:
     engine = PickingEngine()
-    recommendations = engine.recommend(
-        warehouse=empty_warehouse, coffee_type="ARABICA_SPECIAL"
-    )
+    recommendations = engine.recommend(warehouse=empty_warehouse, coffee_type="ARABICA_SPECIAL")
     assert recommendations == []
 
 
 def test_picking_no_matching_coffee_type(empty_warehouse: Warehouse) -> None:
     empty_warehouse.set_slot(create_slot(1, 1, 0, "B-1", coffee_type="ROBUSTA"))
     engine = PickingEngine()
-    recommendations = engine.recommend(
-        warehouse=empty_warehouse, coffee_type="ARABICA_SPECIAL"
-    )
+    recommendations = engine.recommend(warehouse=empty_warehouse, coffee_type="ARABICA_SPECIAL")
     assert recommendations == []
 
 
@@ -135,9 +131,7 @@ def test_picking_cooperative_filter(empty_warehouse: Warehouse) -> None:
 
 def test_picking_max_recommendations_limit(empty_warehouse: Warehouse) -> None:
     for i in range(10):
-        empty_warehouse.set_slot(
-            create_slot(0, i % 5, i % 4, f"BATCH-{i}", coffee_type="ARABICA")
-        )
+        empty_warehouse.set_slot(create_slot(0, i % 5, i % 4, f"BATCH-{i}", coffee_type="ARABICA"))
 
     engine = PickingEngine()
     recs = engine.recommend(

@@ -37,16 +37,11 @@ class CostFunction:
             raise ValueError("Blocking bags count R cannot be negative.")
 
         return float(
-            (self.parameters.alpha * distance)
-            + (self.parameters.beta * float(blocking_bags))
+            (self.parameters.alpha * distance) + (self.parameters.beta * float(blocking_bags))
         )
 
-    def calculate_vectorized(
-        self, distances: np.ndarray, blocking_bags: np.ndarray
-    ) -> np.ndarray:
+    def calculate_vectorized(self, distances: np.ndarray, blocking_bags: np.ndarray) -> np.ndarray:
         """Calculate vectorized cost Z for multidimensional NumPy arrays."""
         if distances.shape != blocking_bags.shape:
-            raise ValueError(
-                f"Array shapes must match: {distances.shape} != {blocking_bags.shape}"
-            )
+            raise ValueError(f"Array shapes must match: {distances.shape} != {blocking_bags.shape}")
         return (self.parameters.alpha * distances) + (self.parameters.beta * blocking_bags)
