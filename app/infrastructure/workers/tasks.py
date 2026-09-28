@@ -1,4 +1,6 @@
 import asyncio
+import concurrent.futures
+from collections.abc import Coroutine
 from typing import Any
 
 import redis.asyncio as aioredis
@@ -16,6 +18,19 @@ from app.infrastructure.erp.models import ERPMovementRecord
 from app.infrastructure.workers.celery_app import celery_app
 
 logger = structlog.get_logger()
+
+
+def _run_coroutine_sync(coro: Coroutine[Any, Any, Any]) -> Any:
+    """Safely execute coroutine synchronously, whether inside or outside a running loop."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            return executor.submit(asyncio.run, coro).result()
+    return asyncio.run(coro)
 
 
 async def _execute_sync(record: ERPMovementRecord) -> bool:
@@ -44,7 +59,7 @@ def process_erp_movement_task(self: Task, movement_dict: dict[str, Any]) -> bool
     """Celery task processing an individual ERP movement record with exponential backoff and DLQ routing."""
     try:
         record = ERPMovementRecord.model_validate(movement_dict)
-        return asyncio.run(_execute_sync(record))
+        return bool(_run_coroutine_sync(_execute_sync(record)))
     except Exception as exc:
         logger.warning(
             "erp_movement_processing_failed",
@@ -68,7 +83,7 @@ def process_erp_movement_task(self: Task, movement_dict: dict[str, Any]) -> bool
 @celery_app.task
 def poll_erp_movements_task() -> int:
     """Scheduled task to poll the legacy ERP and dispatch worker jobs."""
-    polled_count = asyncio.run(_execute_poll())
+    polled_count = int(_run_coroutine_sync(_execute_poll()))
     logger.info("erp_movements_polled", count=polled_count)
     return polled_count
 
