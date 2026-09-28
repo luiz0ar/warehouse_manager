@@ -10,6 +10,9 @@ jobs:
   quality-checks:
     name: Code Quality & Static Analysis
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -38,6 +41,9 @@ jobs:
     name: Tests & Coverage
     runs-on: ubuntu-latest
     needs: quality-checks
+    defaults:
+      run:
+        working-directory: api
 
     services:
       postgres:

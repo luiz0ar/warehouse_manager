@@ -32,8 +32,8 @@ services:
 
   api:
     build:
-      context: .
-      dockerfile: .docker/Dockerfile
+      context: ./api
+      dockerfile: Dockerfile
     container_name: warehouse_manager_api
     ports:
       - "8000:8000"
@@ -53,8 +53,8 @@ services:
 
   worker:
     build:
-      context: .
-      dockerfile: .docker/Dockerfile
+      context: ./api
+      dockerfile: Dockerfile
     container_name: warehouse_manager_worker
     command: ["celery", "-A", "app.infrastructure.workers.celery_app.celery_app", "worker", "--loglevel=info", "-Q", "default,dead_letter", "-B"]
     environment:

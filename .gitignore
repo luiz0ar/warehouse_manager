@@ -81,4 +81,14 @@ ehthumbs.db
 Thumbs.db
 desktop.ini
 
+# Frontend / Node
+node_modules/
+.next/
+out/
+.turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
 .agent/
