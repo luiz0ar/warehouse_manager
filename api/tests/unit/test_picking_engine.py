@@ -94,19 +94,27 @@ def test_picking_rehandling_priority_over_distance(empty_warehouse: Warehouse) -
     empty_warehouse.set_slot(create_slot(2, 2, 1, "BATCH-TOP", coffee_type="ARABICA"))
 
     # alpha=1.0, beta=10.0
-    # Batch A: Dock (0,0,0) -> Manhattan dist: 1+1+0 = 2. Rehandling: 2. Cost Z = (1*2) + (10*2) = 22.0
-    # Batch B: Dock (0,0,0) -> Manhattan dist: 2+2+1 = 5. Rehandling: 0. Cost Z = (1*5) + (10*0) = 5.0
+    # Batch A: Dock (0,0,0) -> A* path: (0,0,0)->(1,0,0)->(1,1,0). Steps: 2 ground + 1 turn (0.5) = 2.5.
+    # Rehandling: 2. Cost Z = (1*2.5) + (10*2) = 22.5
+    # Batch B: Dock (0,0,0) -> A* path: (0,0,0)->(1,0,0)->(2,0,0)->(2,1,0)->(2,2,0)->(2,2,1).
+    # Steps: 4 ground + 1 vertical + 1 turn (0.5) = 5.5. Rehandling: 0. Cost Z = (1*5.5) + (10*0) = 5.5
     engine = PickingEngine(CostParameters(alpha=1.0, beta=10.0))
     recs = engine.recommend(warehouse=empty_warehouse, coffee_type="ARABICA")
 
     assert len(recs) == 2
     assert recs[0].batch_id == "BATCH-TOP"
-    assert recs[0].total_cost == 5.0
+    assert recs[0].total_cost == 5.5
+    assert recs[0].travel_distance == 5.0
+    assert recs[0].turn_count == 1
     assert recs[0].blocking_bags == 0
+    assert len(recs[0].path) == 6
 
     assert recs[1].batch_id == "BATCH-FLOOR"
-    assert recs[1].total_cost == 22.0
+    assert recs[1].total_cost == 22.5
+    assert recs[1].travel_distance == 2.0
+    assert recs[1].turn_count == 1
     assert recs[1].blocking_bags == 2
+    assert len(recs[1].path) == 3
 
 
 def test_picking_cooperative_filter(empty_warehouse: Warehouse) -> None:
@@ -166,3 +174,67 @@ def test_picking_with_euclidean_distance(empty_warehouse: Warehouse) -> None:
 
     assert len(recs) == 1
     assert recs[0].distance == 5.0
+
+
+def test_picking_legacy_manhattan_mode(empty_warehouse: Warehouse) -> None:
+    # Testing with use_a_star=False for backward compatibility
+    empty_warehouse.set_slot(create_slot(1, 1, 0, "BATCH-FLOOR", coffee_type="ARABICA"))
+    empty_warehouse.set_slot(create_slot(1, 1, 1, "OBSTACLE-1", coffee_type="OTHER"))
+    empty_warehouse.set_slot(create_slot(1, 1, 2, "OBSTACLE-2", coffee_type="OTHER"))
+    empty_warehouse.set_slot(create_slot(2, 2, 1, "BATCH-TOP", coffee_type="ARABICA"))
+
+    engine = PickingEngine(cost_parameters=CostParameters(alpha=1.0, beta=10.0), use_a_star=False)
+    recs = engine.recommend(warehouse=empty_warehouse, coffee_type="ARABICA")
+
+    assert len(recs) == 2
+    assert recs[0].batch_id == "BATCH-TOP"
+    assert recs[0].total_cost == 5.0
+    assert recs[0].turn_count == 0
+    assert recs[1].batch_id == "BATCH-FLOOR"
+    assert recs[1].total_cost == 22.0
+
+
+def test_picking_a_star_waypoints_routing(empty_warehouse: Warehouse) -> None:
+    empty_warehouse.set_slot(create_slot(3, 4, 2, "BATCH-342", coffee_type="ARABICA"))
+
+    engine = PickingEngine()
+    recs = engine.recommend(warehouse=empty_warehouse, coffee_type="ARABICA")
+
+    assert len(recs) == 1
+    cand = recs[0]
+    assert cand.coordinates == Coordinates(3, 4, 2)
+    # Starts at Dock
+    assert cand.path[0] == Coordinates(0, 0, 0)
+    # Ends at target slot
+    assert cand.path[-1] == Coordinates(3, 4, 2)
+    # Ground route access point just before vertical elevation
+    assert cand.path[-2] == Coordinates(3, 4, 0)
+    assert cand.vertical_distance == 2.0
+    assert cand.turn_count >= 1
+
+
+def test_picking_unreachable_slot_excluded(empty_warehouse: Warehouse, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.domain.optimization.pathfinding.a_star import (
+        AStarPathfinder,
+        PathNotFoundError,
+        PathResult,
+    )
+
+    empty_warehouse.set_slot(create_slot(1, 2, 0, "BATCH-UNREACHABLE", coffee_type="ARABICA"))
+    empty_warehouse.set_slot(create_slot(2, 2, 0, "BATCH-REACHABLE", coffee_type="ARABICA"))
+
+    def mock_find_path(self: AStarPathfinder, start: Coordinates, goal: Coordinates) -> PathResult:
+        if goal == Coordinates(1, 2, 0):
+            raise PathNotFoundError("Simulated blocked access")
+        # delegate to real method
+        return orig_find_path(self, start, goal)
+
+    orig_find_path = AStarPathfinder.find_path
+    monkeypatch.setattr(AStarPathfinder, "find_path", mock_find_path)
+
+    engine = PickingEngine()
+    recs = engine.recommend(warehouse=empty_warehouse, coffee_type="ARABICA")
+
+    assert len(recs) == 1
+    assert recs[0].batch_id == "BATCH-REACHABLE"
+

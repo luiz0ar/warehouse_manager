@@ -29,7 +29,7 @@ router = APIRouter(prefix="/warehouses", tags=["Warehouses"])
 async def get_warehouse_grid(
     warehouse_id: str,
     session: Annotated[AsyncSession, Depends(get_async_session)],
-    redis_client: Annotated[aioredis.Redis[bytes], Depends(get_redis_client)],
+    redis_client: Annotated[aioredis.Redis, Depends(get_redis_client)],  # type: ignore[type-arg]
 ) -> WarehouseGridSnapshotDTO:
     grid_cache = RedisGridAdapter(redis_client)
     warehouse = await grid_cache.get_warehouse_grid(warehouse_id)
