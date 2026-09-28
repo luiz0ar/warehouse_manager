@@ -107,8 +107,8 @@ async def test_sync_inbound_movement_with_idempotency_and_pubsub(
 
     finally:
         await pubsub.unsubscribe(channel)
-        await pubsub.aclose()  # type: ignore[no-untyped-call]
-        await client.aclose()
+        await pubsub.close()
+        await client.close()
 
 
 @pytest.mark.asyncio
@@ -188,7 +188,7 @@ async def test_sync_outbound_and_internal_transfer(seeded_warehouse: Warehouse) 
             assert s01_after.is_available
 
     finally:
-        await client.aclose()
+        await client.close()
 
 
 def test_celery_task_and_polling(seeded_warehouse: Warehouse) -> None:

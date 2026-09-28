@@ -14,7 +14,7 @@ from app.domain.models.warehouse import Warehouse
 class RedisGridAdapter:
     """Redis adapter for high-performance 3D grid caching and real-time Pub/Sub events."""
 
-    def __init__(self, redis_client: aioredis.Redis) -> None:
+    def __init__(self, redis_client: aioredis.Redis[Any]) -> None:
         self.redis = redis_client
 
     def _meta_key(self, warehouse_id: str) -> str:

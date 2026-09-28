@@ -69,7 +69,7 @@ async def test_redis_grid_adapter_lifecycle() -> None:
         assert await adapter.get_occupied_tensor(warehouse_id) is None
 
     finally:
-        await redis_client.aclose()
+        await redis_client.close()
 
 
 @pytest.mark.asyncio
@@ -93,5 +93,5 @@ async def test_redis_pub_sub_event() -> None:
 
     finally:
         await pubsub.unsubscribe(channel)
-        await pubsub.aclose()  # type: ignore[no-untyped-call]
-        await redis_client.aclose()
+        await pubsub.close()
+        await redis_client.close()

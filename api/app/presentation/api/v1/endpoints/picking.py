@@ -32,7 +32,7 @@ router = APIRouter(prefix="/picking", tags=["Picking"])
 async def recommend_picking(
     payload: PickingRequestDTO,
     session: Annotated[AsyncSession, Depends(get_async_session)],
-    redis_client: Annotated[aioredis.Redis, Depends(get_redis_client)],
+    redis_client: Annotated[aioredis.Redis[bytes], Depends(get_redis_client)],
 ) -> PickingResponseDTO:
     repository = SqlAlchemyWarehouseRepository(session)
     grid_cache = RedisGridAdapter(redis_client)

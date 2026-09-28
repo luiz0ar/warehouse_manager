@@ -116,7 +116,7 @@ async def seed_warehouse(
         grid_cache = RedisGridAdapter(redis_client)
         await grid_cache.set_warehouse_grid(warehouse)
     finally:
-        await redis_client.aclose()
+        await redis_client.close()
     print("[OK] Redis cache synchronized.")
 
     print("\n" + "=" * 70)

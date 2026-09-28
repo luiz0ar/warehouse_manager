@@ -4,10 +4,10 @@ import redis.asyncio as aioredis
 
 from app.core.config import settings
 
-_redis_clients: dict[asyncio.AbstractEventLoop, aioredis.Redis] = {}
+_redis_clients: dict[asyncio.AbstractEventLoop, aioredis.Redis[bytes]] = {}
 
 
-async def get_redis_client() -> aioredis.Redis:
+async def get_redis_client() -> aioredis.Redis[bytes]:
     """Return an asynchronous Redis client instance bound to the active event loop."""
     loop = asyncio.get_running_loop()
     if loop not in _redis_clients:
@@ -18,5 +18,5 @@ async def get_redis_client() -> aioredis.Redis:
 async def close_redis_client() -> None:
     """Close all open Redis client connections."""
     for client in list(_redis_clients.values()):
-        await client.aclose()
+        await client.close()
     _redis_clients.clear()

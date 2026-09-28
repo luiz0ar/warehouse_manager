@@ -69,4 +69,4 @@ async def test_cold_start_rebuild_grid_cache() -> None:
         assert cached_slot.bag.coffee_type == "MUNDO_NOVO"
 
     finally:
-        await redis_client.aclose()
+        await redis_client.close()

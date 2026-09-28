@@ -43,7 +43,7 @@ async def _execute_sync(record: ERPMovementRecord) -> bool:
             use_case = SyncERPMovementUseCase(repository=repository, grid_cache=grid_cache)
             return await use_case.execute(record)
     finally:
-        await client.aclose()
+        await client.close()
 
 
 async def _execute_poll() -> int:

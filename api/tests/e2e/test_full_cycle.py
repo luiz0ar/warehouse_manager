@@ -66,7 +66,7 @@ async def e2e_warehouse(unique_warehouse_id: str) -> Warehouse:
     redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=False)
     redis_adapter = RedisGridAdapter(redis_client)
     await redis_adapter.set_warehouse_grid(wh)
-    await redis_client.aclose()
+    await redis_client.close()
 
     return wh
 
@@ -187,7 +187,7 @@ async def test_full_cycle_erp_polling_to_grid_to_picking_api(
         assert data_after["total_candidates_evaluated"] == 0
         assert len(data_after["recommendations"]) == 0
 
-    await redis_client.aclose()
+    await redis_client.close()
 
 
 @pytest.mark.asyncio
@@ -272,4 +272,4 @@ async def test_dod_sync_lag_under_60_seconds(
         assert metrics_resp.status_code == 200
         assert "warehouse_sync_lag_seconds" in metrics_resp.text
 
-    await redis_client.aclose()
+    await redis_client.close()
