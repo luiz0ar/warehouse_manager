@@ -22,8 +22,8 @@ export const LegendOverlay: React.FC = () => {
 
           <div className="space-y-1.5 text-[11px]">
             <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-md bg-[#22c55e]" />
-              <span>Espaço Livre</span>
+              <span className="w-3 h-3 rounded-md bg-[#282f3c] border border-slate-600" />
+              <span>Espaço Livre (Disponível)</span>
             </div>
             <div className="flex items-center space-x-2">
               <span className="w-3 h-3 rounded-md bg-[#ef4444]" />

@@ -5,13 +5,16 @@ import {
   SlotSnapshot,
   WarehouseGridSnapshot,
 } from "@/types/warehouse";
+import { requestPickingRecommendation } from "@/services/warehouseApi";
 
 interface WarehouseState {
   warehouse: WarehouseGridSnapshot | null;
   isMockMode: boolean;
   selectedSlot: SlotSnapshot | null;
   searchQuery: string;
-  searchFilterType: string;
+  isSearchModalOpen: boolean;
+  filterCoffeeType: string;
+  filterCooperative: string;
   highlightedSlotCoords: Coordinates | null;
   highlightedBatchId: string | null;
   pickingRecommendations: PickingRecommendationItem[];
@@ -21,8 +24,14 @@ interface WarehouseState {
   // Actions
   setWarehouse: (warehouse: WarehouseGridSnapshot, isMock?: boolean) => void;
   selectSlot: (slot: SlotSnapshot | null) => void;
-  setSearchQuery: (query: string) => void;
-  setSearchFilterType: (filter: string) => void;
+  setIsSearchModalOpen: (open: boolean) => void;
+  setFilterCoffeeType: (coffeeType: string) => void;
+  setFilterCooperative: (coop: string) => void;
+  executeFilterSearch: (params: {
+    coffeeType?: string;
+    cooperative?: string;
+    batchId?: string;
+  }) => Promise<void>;
   searchBatch: (query: string) => void;
   clearSearch: () => void;
   setPickingRecommendations: (recommendations: PickingRecommendationItem[]) => void;
@@ -35,7 +44,9 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
   isMockMode: false,
   selectedSlot: null,
   searchQuery: "",
-  searchFilterType: "ALL",
+  isSearchModalOpen: false,
+  filterCoffeeType: "ALL",
+  filterCooperative: "ALL",
   highlightedSlotCoords: null,
   highlightedBatchId: null,
   pickingRecommendations: [],
@@ -44,6 +55,18 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
 
   setWarehouse: (warehouse, isMock = false) => {
     set({ warehouse, isMockMode: isMock });
+  },
+
+  setIsSearchModalOpen: (open) => {
+    set({ isSearchModalOpen: open });
+  },
+
+  setFilterCoffeeType: (coffeeType) => {
+    set({ filterCoffeeType: coffeeType });
+  },
+
+  setFilterCooperative: (coop) => {
+    set({ filterCooperative: coop });
   },
 
   selectSlot: (slot) => {
@@ -64,13 +87,113 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
     });
   },
 
-  setSearchQuery: (query) => {
-    set({ searchQuery: query });
-    get().searchBatch(query);
-  },
+  executeFilterSearch: async ({ coffeeType, cooperative, batchId }) => {
+    const { warehouse } = get();
+    if (!warehouse) return;
 
-  setSearchFilterType: (filter) => {
-    set({ searchFilterType: filter });
+    const typeFilter = coffeeType && coffeeType !== "ALL" ? coffeeType : undefined;
+    const coopFilter = cooperative && cooperative !== "ALL" ? cooperative : undefined;
+    const batchFilter = batchId?.trim().toUpperCase();
+
+    // 1. Se informou batch_id específico, busca exato ou parcial
+    if (batchFilter) {
+      const exact = warehouse.slots.find(
+        (s) => s.batch && s.batch.batch_id.toUpperCase() === batchFilter
+      );
+      const partial = warehouse.slots.find(
+        (s) => s.batch && s.batch.batch_id.toUpperCase().includes(batchFilter)
+      );
+      const match = exact || partial;
+
+      if (match) {
+        set({
+          selectedSlot: match,
+          highlightedBatchId: match.batch!.batch_id,
+          highlightedSlotCoords: match.coordinates,
+          cameraFocus: [
+            match.coordinates.street_x,
+            match.coordinates.level_z,
+            match.coordinates.column_y,
+          ],
+          isSearchModalOpen: false,
+        });
+        return;
+      }
+    }
+
+    // 2. Consulta rota de picking via API para recomendar o melhor lote (Top 1)
+    try {
+      const res = await requestPickingRecommendation({
+        warehouse_id: warehouse.warehouse_id,
+        coffee_type: typeFilter || "BOURBON_AMARELO",
+        cooperative_id: coopFilter,
+        max_recommendations: 5,
+      });
+
+      if (res.recommendations && res.recommendations.length > 0) {
+        const top1 = res.recommendations[0];
+        const slot = warehouse.slots.find(
+          (s) =>
+            s.coordinates.street_x === top1.coordinates.street_x &&
+            s.coordinates.column_y === top1.coordinates.column_y &&
+            s.coordinates.level_z === top1.coordinates.level_z
+        );
+
+        set({
+          pickingRecommendations: res.recommendations,
+          activePickingRank: 1,
+          selectedSlot: slot || null,
+          highlightedBatchId: top1.batch_id,
+          highlightedSlotCoords: top1.coordinates,
+          cameraFocus: [
+            top1.coordinates.street_x,
+            top1.coordinates.level_z,
+            top1.coordinates.column_y,
+          ],
+          isSearchModalOpen: false,
+        });
+        return;
+      }
+    } catch (err) {
+      console.warn("Falha ao obter picking durante a busca:", err);
+    }
+
+    // 3. Fallback: seleciona o lote mais próximo da doca que bate com os filtros
+    const candidates = warehouse.slots.filter(
+      (s) =>
+        s.status === "OCCUPIED" &&
+        s.batch &&
+        (!typeFilter || s.batch.coffee_type === typeFilter) &&
+        (!coopFilter || s.batch.cooperative_id === coopFilter)
+    );
+
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => {
+        const distA =
+          a.coordinates.street_x + a.coordinates.column_y + a.coordinates.level_z;
+        const distB =
+          b.coordinates.street_x + b.coordinates.column_y + b.coordinates.level_z;
+        return distA - distB;
+      });
+
+      const top1 = candidates[0];
+      set({
+        selectedSlot: top1,
+        highlightedBatchId: top1.batch!.batch_id,
+        highlightedSlotCoords: top1.coordinates,
+        cameraFocus: [
+          top1.coordinates.street_x,
+          top1.coordinates.level_z,
+          top1.coordinates.column_y,
+        ],
+        isSearchModalOpen: false,
+      });
+    } else {
+      // Nenhum lote compatível encontrado
+      set({
+        isSearchModalOpen: false,
+      });
+    }
   },
 
   searchBatch: (query) => {
@@ -87,7 +210,6 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
     const { warehouse } = get();
     if (!warehouse) return;
 
-    // Busca por batch_id com prioridade para exato, depois parcial
     const exactMatch = warehouse.slots.find(
       (slot) => slot.batch && slot.batch.batch_id.toUpperCase() === trimmed
     );
@@ -126,6 +248,8 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
       highlightedSlotCoords: null,
       selectedSlot: null,
       cameraFocus: null,
+      pickingRecommendations: [],
+      activePickingRank: null,
     });
   },
 

@@ -27,8 +27,8 @@ export const Header: React.FC = () => {
       <div className="flex items-center space-x-2">
         {warehouse && (
           <div className="flex items-center space-x-1.5 text-xs bg-slate-900/80 border border-slate-800 rounded-full px-2.5 py-1">
-            <span className="flex items-center text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1 animate-pulse" />
+            <span className="flex items-center text-slate-300 font-medium">
+              <span className="w-2 h-2 rounded-full bg-slate-400 mr-1" />
               {warehouse.free_slots_count}
             </span>
             <span className="text-slate-600">/</span>

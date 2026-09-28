@@ -23,7 +23,7 @@ export const PickingDrawer: React.FC = () => {
               <Navigation className="w-3.5 h-3.5" />
             </div>
             <h3 className="text-xs font-bold text-amber-300 uppercase tracking-wider">
-              Rota Ótima de Picking
+              Melhor rota de retirada
             </h3>
           </div>
           <button

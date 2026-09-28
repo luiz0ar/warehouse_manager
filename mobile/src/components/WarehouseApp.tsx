@@ -6,7 +6,8 @@ import { useWarehouseStore } from "@/store/useWarehouseStore";
 import { fetchWarehouseGrid } from "@/services/warehouseApi";
 import { WarehouseScene } from "@/components/3d/WarehouseScene";
 import { Header } from "@/components/ui/Header";
-import { FloatingSearchBar } from "@/components/ui/FloatingSearchBar";
+import { SearchButton } from "@/components/ui/SearchButton";
+import { SearchModal } from "@/components/ui/SearchModal";
 import { SlotDetailDrawer } from "@/components/ui/SlotDetailDrawer";
 import { PickingDrawer } from "@/components/ui/PickingDrawer";
 import { LegendOverlay } from "@/components/ui/LegendOverlay";
@@ -28,7 +29,7 @@ function WarehouseContent() {
   useEffect(() => {
     async function loadData() {
       try {
-        const { data, isMock } = await fetchWarehouseGrid("WH-CENTRAL-01");
+        const { data, isMock } = await fetchWarehouseGrid("WH-MINASUL-01");
         setWarehouse(data, isMock);
       } catch (err) {
         console.error("Falha ao carregar grid:", err);
@@ -54,7 +55,8 @@ function WarehouseContent() {
   return (
     <main className="relative w-full h-full flex-1 overflow-hidden bg-[#0f1117]">
       <Header />
-      <FloatingSearchBar />
+      <SearchButton />
+      <SearchModal />
       <WarehouseScene />
       <PickingDrawer />
       <SlotDetailDrawer />

@@ -1,12 +1,10 @@
+import { api } from "@/api/api";
 import {
   PickingRequest,
   PickingResponse,
   WarehouseGridSnapshot,
   SlotSnapshot,
 } from "@/types/warehouse";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 /**
  * Gera um armazém mock estruturado fiel ao layout do Figma:
@@ -22,7 +20,6 @@ export function generateMockWarehouse(): WarehouseGridSnapshot {
   let freeCount = 0;
 
   // Lotes predefinidos para bater com o layout visual do Figma
-  // (maioria livre em verde, alguns ocupados em vermelho nos cantos e centro)
   const occupiedPresets: Record<string, { batchId: string; type: string; coop: string; weight: number }> = {
     "1-1-1": { batchId: "LOTE-2026-001", type: "ARABICA", coop: "COOP-SUL", weight: 1250 },
     "2-2-0": { batchId: "LOTE-2026-002", type: "ARABICA", coop: "COOP-MINAS", weight: 1100 },
@@ -81,86 +78,73 @@ export function generateMockWarehouse(): WarehouseGridSnapshot {
   };
 }
 
+/**
+ * Consulta a topologia 3D do armazém utilizando a biblioteca ky.
+ */
 export async function fetchWarehouseGrid(
-  warehouseId: string = "WH-CENTRAL-01"
+  warehouseId: string = "WH-MINASUL-01"
 ): Promise<{ data: WarehouseGridSnapshot; isMock: boolean }> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
-
-    const response = await fetch(`${API_BASE_URL}/warehouses/${warehouseId}/grid`, {
-      signal: controller.signal,
-      headers: { "Content-Type": "application/json" },
-    });
-    clearTimeout(timeoutId);
-
-    if (response.ok) {
-      const data = await response.json();
-      return { data, isMock: false };
-    }
+    const data = await api
+      .get(`warehouses/${warehouseId}/grid`)
+      .json<WarehouseGridSnapshot>();
+    return { data, isMock: false };
   } catch (error) {
-    console.warn("API indisponível, utilizando dados mock do armazém 3D:", error);
+    console.warn("API indisponível via ky, utilizando fallback simulado:", error);
+    return { data: generateMockWarehouse(), isMock: true };
   }
-
-  // Fallback seguro caso backend esteja offline
-  return { data: generateMockWarehouse(), isMock: true };
 }
 
+/**
+ * Solicita rota ótima de picking via API com ky.
+ */
 export async function requestPickingRecommendation(
   payload: PickingRequest
 ): Promise<PickingResponse> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-    const response = await fetch(`${API_BASE_URL}/picking/recommend`, {
-      method: "POST",
-      signal: controller.signal,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    clearTimeout(timeoutId);
-
-    if (response.ok) {
-      return await response.json();
-    }
+    const response = await api
+      .post("picking/recommend", {
+        json: payload,
+      })
+      .json<PickingResponse>();
+    return response;
   } catch (error) {
-    console.warn("API Picking indisponível, simulando rota recomendada local:", error);
+    console.warn("API Picking indisponível via ky, simulando rota heurística local:", error);
+
+    // Simulação local de recomendação heurística como fallback
+    const mockWarehouse = generateMockWarehouse();
+    const candidates = mockWarehouse.slots
+      .filter(
+        (s) =>
+          s.status === "OCCUPIED" &&
+          s.batch &&
+          (!payload.coffee_type || s.batch.coffee_type === payload.coffee_type) &&
+          (!payload.cooperative_id || s.batch.cooperative_id === payload.cooperative_id)
+      )
+      .slice(0, payload.max_recommendations || 3)
+      .map((slot, index) => {
+        const dist = Math.sqrt(
+          slot.coordinates.street_x ** 2 +
+            slot.coordinates.column_y ** 2 +
+            slot.coordinates.level_z ** 2
+        );
+        return {
+          rank: index + 1,
+          batch_id: slot.batch!.batch_id,
+          coordinates: slot.coordinates,
+          distance_to_dock: Number(dist.toFixed(1)),
+          blocking_bags_count: 0,
+          estimated_cost: Number((dist * 1.2).toFixed(1)),
+          coffee_type: slot.batch!.coffee_type,
+          cooperative_id: slot.batch!.cooperative_id,
+        };
+      });
+
+    return {
+      warehouse_id: payload.warehouse_id,
+      generated_at: new Date().toISOString(),
+      total_candidates_evaluated: candidates.length,
+      recommendations: candidates,
+    };
   }
-
-  // Simulação local de recomendação heurística
-  const mockWarehouse = generateMockWarehouse();
-  const candidates = mockWarehouse.slots
-    .filter(
-      (s) =>
-        s.status === "OCCUPIED" &&
-        s.batch &&
-        (!payload.coffee_type || s.batch.coffee_type === payload.coffee_type) &&
-        (!payload.cooperative_id || s.batch.cooperative_id === payload.cooperative_id)
-    )
-    .slice(0, payload.max_recommendations || 3)
-    .map((slot, index) => {
-      const dist = Math.sqrt(
-        slot.coordinates.street_x ** 2 +
-          slot.coordinates.column_y ** 2 +
-          slot.coordinates.level_z ** 2
-      );
-      return {
-        rank: index + 1,
-        batch_id: slot.batch!.batch_id,
-        coordinates: slot.coordinates,
-        distance_to_dock: Number(dist.toFixed(1)),
-        blocking_bags_count: 0,
-        estimated_cost: Number((dist * 1.2).toFixed(1)),
-        coffee_type: slot.batch!.coffee_type,
-        cooperative_id: slot.batch!.cooperative_id,
-      };
-    });
-
-  return {
-    warehouse_id: payload.warehouse_id,
-    generated_at: new Date().toISOString(),
-    total_candidates_evaluated: candidates.length,
-    recommendations: candidates,
-  };
 }
